@@ -1,0 +1,100 @@
+Make sure that automate FY is in all the files and the calls to newyear+" filename" are changed
+
+and make sure that the automate FY stops if it's older tahn a few years
+
+
+Bugs:
+
+When doing entry post collating, and the Customer is found and already has an number, Pan wills try to call the field 
+but not be able to. Need to find the spot where it is. 
+
+
+Edits: 
+
+In Next/1:
+
+added a formcheck to make sure the user is in the right form
+added a WinCheck variable to see what windows are open to help with referencing correct windows 
+
+        ___ PROCEDURE next/1 ___________________________________________________________
+        global WinCheck, intOrder1
+
+        intOrder1=int(OrderNo)
+
+        WinCheck=info("windows")
+
+        case intOrder1 ≥ 700000
+            if WinCheck notcontains "seedsinput"
+            openform "seedsinput"
+            endif
+        case intOrder1 ≥ 600000 and intOrder1 < 700000
+            if WinCheck notcontains "mtinput"
+            openform "mtinput"
+            endif
+        case intOrder1 ≥ 500000 and intOrder1 < 600000
+            if WinCheck notcontains "bulbsinput"
+            openform "bulbsinput"
+            endif
+        case intOrder1 ≥ 400000 and intOrder1 < 500000
+            if WinCheck notcontains "treesinput"
+            openform "treesinput"
+            endif
+        case intOrder1 ≥ 300000 and intOrder1 <400000
+            if WinCheck notcontains "ogsinput"
+            openform "ogsinput"
+            endif
+        endcase
+
+
+//!!!!!! This is missing an argument. Why is it here?
+drawobjects
+
+
+
+In .customerfill
+
+Previous work that isn't finished
+//******!!needs testing
+//SpareText3=datepattern(today(),"MM/DD/YY")+" - Most Recent Order"+" "+"S"+str(S)+" "+"T"+str(T)+" "+"B"+str(Bf)
+//currently is holding "Previous Addresses" from an incomplete macro
+//perhaps make a dicitonary of both of these data points? 
+
+
+
+Updated the UPdatemaail and newsearch macros to make them actually loop correctly
+
+to do on 8/2/22:
+
+Find out what is saving on a server???
+-hit saveall to make it happen
+
+
+makesure the addmail part works correctly 
+
+    if info("dialogtrigger") contains "ok"
+                find exportline() contains chosenAddress
+                if info("found")=-1
+                    message "Found!"
+                    call "enter/e"
+                else
+                    message "error, repeating search..."
+                    farcall "45orders","NewSearch/`"
+                endif
+            endif
+            if info("dialogtrigger") contains "search"
+                farcall "45orders","NewSearch/`"
+            endif
+            if info("dialogtrigger") contains "cancel"
+            stop
+            endif
+             goto addmail
+        endif
+    endif
+endif
+
+
+use magicwindow to set the dimentions for the order entry windows see "Magicwindow" in the reference
+
+
+Theres a lot of things that do a find and then if it doesnt find someone, it just adds a record
++++you need more than just that loop on those 
