@@ -287,11 +287,11 @@ case KeyStroke=chr(31)
 ;downrecord
 ;endif
 if info("formname")="addresschecker"
-downrecord
-window thisFYear+"orders:seedsinput"
-downrecord
-window thisFYear+" mailing list:addresschecker"
-endif
+    downrecord
+    window thisFYear+"orders:seedsinput"
+    downrecord
+    window thisFYear+" mailing list:addresschecker"
+    endif
 defaultcase
     key info("modifiers"), KeyStroke
     endcase
@@ -387,7 +387,7 @@ City=grabdata(thisFYear+" mailing list", City)
 St=grabdata(thisFYear+" mailing list", St)
 Zip=grabdata(thisFYear+" mailing list", Zip)
 SpareText2=grabdata(thisFYear+" mailing list", SpareText2)
-Notes=replace(Notes, "Bad Address","")
+RedFlag=?(RedFlag contains "address", RedFlag="",RedFlag)
 Num=0
 endif
 window thisFYear+" mailing list"
@@ -418,7 +418,7 @@ supergettext findher, {caption="Enter Address.Zip" height=100 width=400 captionf
             findzip="0"+findzip
             endif
         findcity=extract(findher,".",1)
-        liveclairvoyance findzip,listzip,¶,"","45 mailing list",pattern(Zip,"#####"),"=",str(«C#»)+¬+rep(" ",7-length(str(«C#»)))+Con+rep(" ",max(20-length(Con),1))+¬+MAd+¬+City+¬+St+¬+pattern(Zip,"#####"),0,0,""
+        liveclairvoyance findzip,listzip,¶,"",thisFYear+" mailing list",pattern(Zip,"#####"),"=",str(«C#»)+¬+rep(" ",7-length(str(«C#»)))+Con+rep(" ",max(20-length(Con),1))+¬+MAd+¬+City+¬+St+¬+pattern(Zip,"#####"),0,0,""
         arraysubset listzip, listzip, ¶, import() contains findcity
             if listzip=""
             goto lastzip
@@ -527,7 +527,7 @@ tryname:
      if info("dialogtrigger") contains "New"
         gettext "Which town?", newcity
         if newcity≠""
-            window "45 mailing list"
+            window thisFYear+" mailing list"
             find Z=val(findzip) and City contains newcity
             insertbelow
         else
@@ -579,9 +579,11 @@ ___ PROCEDURE .tab1 ____________________________________________________________
 Numb=0
 if «C#»>0
     Numb=«C#»
-    window "customer_history"
+    window "customer_history:secret"
     Find «C#» = Numb
     if (not info("found"))
+        yesno "Can't Find that Customer Number, add a new record in customer history?"
+    case clipboard()="Yes"
         OpenSheet
         lastrecord
         insertbelow
@@ -596,6 +598,9 @@ if «C#»>0
     «SpareText2»=grabdata(thisFYear+" mailing list", «SpareText2»)
     ;closewindow
     ;window "customer_history:customeractivity"
+    defaultcase
+    //blank on purpose
+    endcase 
 
     window thisFYear+" mailing list"
 endif
@@ -656,7 +661,7 @@ window thisFYear+" mailing list"
 ___ ENDPROCEDURE .member _______________________________________________________
 
 ___ PROCEDURE listsortcomplete/1 _______________________________________________
-Hide
+noshow
 //___added this to stop showing mostly empty records on initialize
 select str(«C#»)+Con+MAd+City ≠ "0"
 //___  -L 8/22
