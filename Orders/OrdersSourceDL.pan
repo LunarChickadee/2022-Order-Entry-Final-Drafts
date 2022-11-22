@@ -382,6 +382,8 @@ Num=«C#»
 ono=OrderNo
 addressArray=""
 conArray=""
+rayj=""
+aray=""
 
 call ".IsInternetOrder"
 
@@ -2026,7 +2028,7 @@ if ShipCode contains "U" or ShipCode contains "X"
     Openfile "45shiplookup"
     Find ZipBegin<val(VZ) And val(VZ)≤ZipEnd
     Case Vship = 0
-         «$Sh»=0
+        «$Sh»=0
     Case Vship ≤ 2
         «$Sh»=«≤2»
     Case Vship ≤ 5
@@ -2643,7 +2645,7 @@ ___ PROCEDURE same mail/6 ______________________________________________________
 MAd=SAd
 City=Cit
 St=Sta
-Zip=Z
+Zip=Z
 ___ ENDPROCEDURE same mail/6 ___________________________________________________
 
 ___ PROCEDURE updatemail/7 _____________________________________________________
@@ -2790,11 +2792,11 @@ if info("found")=-1
                     call "enter/e"
                 else
                     message "error, repeating search..."
-                    farcall "45orders","NewSearch/`"
+                    farcall thisFYear+"orders","NewSearch/`"
                 endif
             endif
             if info("dialogtrigger") contains "search"
-                farcall "45orders","NewSearch/`"
+                farcall thisFYear+"orders","NewSearch/`"
             endif
             if info("dialogtrigger") contains "cancel"
             stop
