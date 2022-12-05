@@ -1,6 +1,12 @@
+## high pirority
+
 Make sure that automate FY is in all the files and the calls to newyear+" filename" are changed
 
 and make sure that the automate FY stops if it's older tahn a few years
+
+
+
+check out Updatemail. When does it get called?
 
 
 Bugs:
