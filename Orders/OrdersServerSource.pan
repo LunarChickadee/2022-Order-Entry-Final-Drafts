@@ -3296,14 +3296,33 @@ endif
 ___ ENDPROCEDURE addpay ________________________________________________________
 
 ___ PROCEDURE Check Totals _____________________________________________________
+local start_order, end_order
+gettext "What's the starting OrderNo?", start_order
+gettext "What's the ending OrderNo?", end_order
+selectwithin CreditCard=""
+if info("empty")
+message "CreditCard is not empty. Process stopped"
+endif
+opensheet
+field «1stPayment»
+total
+
+//____previous code ____
+/*
 getscrap "What's the starting OrderNo?"
 select OrderNo ≥ val(clipboard())
 getscrap "What's the ending OrderNo?"
 selectwithin OrderNo ≤ val(clipboard())
 selectwithin CreditCard=""
-;message "order number: "+str(OrderNo)+"  "+"1st Payment: "+str(«1stPayment»)
+if info("empty")
+message "CreditCard is not empty. Process stopped"
+endif
+;message "order number: "+str(OrderNo)+" "+"1st Payment: "+str(«1stPayment»)
+opensheet
 field «1stPayment»
 total
+*/
+
 ___ ENDPROCEDURE Check Totals __________________________________________________
 
 ___ PROCEDURE ExportMacros _____________________________________________________

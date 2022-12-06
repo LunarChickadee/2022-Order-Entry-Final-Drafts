@@ -192,6 +192,7 @@ SeedsHistory=Seeds_Sales
 OGSHistory=OGS_Sales
 TreesHistory=Trees_Sales
 BulbsHistory=Bulbs_Sales
+MooseHistory=Moose_Sales
 
 
 
