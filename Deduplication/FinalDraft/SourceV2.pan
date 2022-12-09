@@ -380,6 +380,11 @@ field HowLikelyWeight
 sortdown
 firstrecord
 
+select info("summary")<1
+global list_of_records
+arraybuild list_of_records, ¶,"",exportline()
+
+
 
 ___ ENDPROCEDURE AutoSort/1 ____________________________________________________
 
@@ -639,55 +644,107 @@ if info("summary")>0
 endif
 
 ///____Begin Cycle____
-    firstrecord
+global Seeds_Merged, Seeds_Hist1,
+        Trees_Merged, Trees_Hist1,
+        OGS_Merged, OGS_Hist1,
+        Moose_Merged, Moose_Hist1,
+        Bulbs_Merged, Bulbs_Hist1
 
-LoadRecord1:
-    Seeds_Rec1=«CountSequence»
-    Seeds_Hist1=SeedsHistory
-    «MergedWith»=str(New_Master_Record)+","+str(New_Master_CNum)
+
+//____Seeds Merge_____
+    Seeds_Merged=""
+    Seeds_Hist1=""
+
+    firstrecord 
+
+    loop
+    if info("summary")<1
+        Seeds_Hist1=«SeedsHistory»
+        arrayfilter Seeds_Hist1, Seeds_Merged, ",", val(import())+val(array(Seeds_Merged, seq(), ","))
+        displaydata Seeds_Merged
+    endif
     downrecord
 
-//____If we hit a summary, then there's no Record2_____
-    if info("summary")>0 or info("stopped")
-        message "Got to summary, Ready for final merge."
-        goto FinalMerge
-        stop
-    endif
+    until info("summary")>0
 
-LoadRecord2:
-    Seeds_Rec2=«CountSequence»
-    Seeds_Hist2=SeedsHistory
-    «MergedWith»=str(New_Master_Record)+","+str(New_Master_CNum)
-
-
-//____Just an error check for debugging____
-if Seeds_Rec1=Seeds_Rec2
-    message "Error. Same record."
-    stop
-endif
-
-
-//___use sequence nubmer instead?
-Return_To=«C#»
-
-;displaydata array(Seeds_Hist1, 1, ",")
-arrayfilter Seeds_Hist1, Seeds_Merged, ",", val(import())+val(array(Seeds_Hist2, seq(), ","))
-
-//____Fill Summary Record____
-lastrecord
-if «IsAMergeRecord» contains "Yes"
     SeedsHistory=Seeds_Merged
-    «MergedWith»=?(«MergedWith»="", Seeds_Rec1+","+Seeds_Rec2, «MergedWith»+","+Seeds_Rec1+","+Seeds_Rec2)
-endif
-firstrecord
 
-//___sequence???
-find «C#»=Return_To
+//____Trees Merge_____
+    Trees_Merged=""
+    Trees_Hist1=""
 
+    firstrecord 
+
+    loop
+    if info("summary")<1
+        Trees_Hist1=«TreesHistory»
+        arrayfilter Trees_Hist1, Trees_Merged, ",", val(import())+val(array(Trees_Merged, seq(), ","))
+        displaydata Trees_Merged
+    endif
+    downrecord
+
+    until info("summary")>0
+
+    TreesHistory=Trees_Merged
+
+//____Bulbs Merge_____
+    Bulbs_Merged=""
+    Bulbs_Hist1=""
+
+    firstrecord 
+
+    loop
+    if info("summary")<1
+        Bulbs_Hist1=«BulbsHistory»
+        arrayfilter Bulbs_Hist1, Bulbs_Merged, ",", val(import())+val(array(Bulbs_Merged, seq(), ","))
+        displaydata Bulbs_Merged
+    endif
+    downrecord
+
+    until info("summary")>0
+
+    BulbsHistory=Bulbs_Merged
+
+//____OGS Merge_____
+    OGS_Merged=""
+    OGS_Hist1=""
+
+    firstrecord 
+
+    loop
+    if info("summary")<1
+        OGS_Hist1=«OGSHistory»
+        arrayfilter OGS_Hist1, OGS_Merged, ",", val(import())+val(array(OGS_Merged, seq(), ","))
+        displaydata OGS_Merged
+    endif
+    downrecord
+
+    until info("summary")>0
+
+    OGSHistory=OGS_Merged
+
+//____Moose Merge_____
+    Moose_Merged=""
+    Moose_Hist1=""
+
+    firstrecord 
+
+    loop
+    if info("summary")<1
+        Moose_Hist1=«MooseHistory»
+        arrayfilter Moose_Hist1, Moose_Merged, ",", val(import())+val(array(Moose_Merged, seq(), ","))
+        displaydata Moose_Merged
+    endif
+    downrecord
+
+    until info("summary")>0
+
+    MooseHistory=Moose_Merged
+
+yesno "stop?"
+if clipboard()="Yes"
 stop
-
-FinalMerge: ///this may need to move
-
+endif
 
 call .MergeToHistory
 ___ ENDPROCEDURE .LineItemMerge ________________________________________________
