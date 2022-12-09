@@ -1,12 +1,16 @@
 ___ PROCEDURE FindMostRecent ___________________________________________________
-
-global Dedup_form, Branch_with_most_recent, Field_Nums_Array, most_recent_year,reference_num
+global Dedup_form, Branch_with_most_recent, Field_Nums_Array, most_recent_year,reference_num,
+    seed_dict, new_ogs_dict, old_ogs_dict, bulbs_dict, trees_dict
 
 Branch_with_most_recent=""
 
 Dedup_form=info("windowname")
 
-
+seed_dict=""
+new_ogs_dict=""
+old_ogs_dict=""
+bulbs_dict=""
+trees_dict=""
 
 reference_num=val(«C#»)
 
@@ -20,7 +24,7 @@ find «C#»=reference_num
             LastOldOGS=0
             LastSeeds=0
             LastTrees=0
-         stop
+        stop
     endif
 defaultcase
     stop
@@ -39,7 +43,7 @@ endcase
     Seeds_Num=""
 
     //__This just Fill the history on the Deduplicator
-    Seeds_Sales=lineitemarray(SΩ, ¶)
+    Seeds_Sales=lineitemarray(SΩ, ",")
     ///___Counts fields for the array, finds the non-zero ones, gives those counts and amounts
     arrayfilter lineitemarray(SΩ,¶), Seeds_History, ¶, str(Seq())+¬+import()
     arrayfilter Seeds_History,Recent_Seeds, ¶, ?(val(import()[¬,-1][2,-1])>0, import(),"")
@@ -67,8 +71,7 @@ endcase
     Bulbs_Num=""
     Bulbs_Sales=""
 
-    Bulbs_Sales=lineitemarray(BfΩ, ¶)
-
+    Bulbs_Sales=lineitemarray(BfΩ, ",")
     ///___Counts fields for the array, finds the non-zero ones, gives those counts and amounts
     arrayfilter lineitemarray(BfΩ,¶), Bulbs_History, ¶, str(Seq())+¬+import()
     arrayfilter Bulbs_History,Recent_Bulbs, ¶, ?(val(import()[¬,-1][2,-1])>0, import(),"")
@@ -96,7 +99,7 @@ endcase
     Moose_Num=""
     Moose_Sales=""
 
-    Moose_Sales=lineitemarray(MΩ, ¶)
+    Moose_Sales=lineitemarray(MΩ, ",")
 
     ///___Counts fields for the array, finds the non-zero ones, gives those counts and amounts
     arrayfilter lineitemarray(MΩ,¶), Moose_History, ¶, str(Seq())+¬+import()
@@ -125,7 +128,7 @@ endcase
     OGS_Num=""
     OGS_Sales=""
 
-    OGS_Sales=lineitemarray(OGSΩ, ¶)
+    OGS_Sales=lineitemarray(OGSΩ, ",")
 
     ///___Counts fields for the array, finds the non-zero ones, gives those counts and amounts
     arrayfilter lineitemarray(OGSΩ,¶), OGS_History, ¶, str(Seq())+¬+import()
@@ -153,7 +156,7 @@ Field_Trees=""
 Trees_Num=""
 Trees_Sales=""
 
-Trees_Sales=lineitemarray(TΩ, ¶)
+Trees_Sales=lineitemarray(TΩ, ",")
 
 ///___Counts fields for the array, finds the non-zero ones, gives those counts and amounts
 arrayfilter lineitemarray(TΩ,¶), Trees_History, ¶, str(Seq())+¬+import()
@@ -179,6 +182,28 @@ Branch_with_most_recent=
     ?(Field_Moose contains str(most_recent_year), "Moose: "+most_recent_year+" ","")+
     ?(Field_Trees contains str(most_recent_year), "Trees: "+most_recent_year+" ","")+
     ?(Field_OGS   contains str(most_recent_year), "OGS: "+most_recent_year+" ","")
+
+
+///_____SetDictionaries for archive_____
+    if val(striptonum(Seeds_Sales))>0
+        setdictionaryvalue seed_dict, Last_Seeds, Seeds_Sales
+        endif
+    if val(striptonum(Trees_Sales))>0
+        setdictionaryvalue trees_dict, Last_Trees, Trees_Sales
+        endif
+    if val(striptonum(Bulbs_Sales))>0
+        setdictionaryvalue bulbs_dict, Last_Bulbs, Bulbs_Sales
+        endif
+    if val(striptonum(OGS_Sales))>0
+        setdictionaryvalue old_ogs_dict, Last_OGS, OGS_Sales ///Reminder that now the M## field carries OGS info
+        endif
+    if val(striptonum(Moose_Sales))>0
+        setdictionaryvalue new_ogs_dict, Last_Moose, Moose_Sales
+    endif
+
+
+displaydata seed_dict+¶+trees_dict+¶+bulbs_dict+¶+old_ogs_dict+¶+new_ogs_dict
+
 
 window Dedup_form
 
@@ -271,7 +296,7 @@ Hits multiple criteria: 5
         downrecord
         fivecount=fivecount-1
     until info("stopped") or fivecount=0
- 
+
 
     field «UpdateWeight»
         formulafill «»*val(recently_updated_ML)
@@ -308,7 +333,7 @@ selectall
 selectall
 
 ///_____Has a sale that was entered most recently____
-   
+
     field EnteredWeight
         formulafill 0
     select «MostRecentEntered»>0
@@ -334,13 +359,13 @@ selectall
             formulafill «»*entered_recently
     endif
     
- 
- 
- //fix this not resetting the numbers back if run again
+
+
+//fix this not resetting the numbers back if run again
     
 field ConsentWeight
     formulafill «»*has_consent
-  
+
     
 field OnlineWeight
     formulafill Online*5
@@ -414,16 +439,23 @@ Field «Group»
     arraybuild compare_records, ¶, "", «»
     arraydeduplicate compare_records, compare_records_again, ¶
     if arraycontains(compare_records,"No Group",¶)=-1 and linecount(compare_records_again)>1
-        select «Group» contains "No Group"
-        Formulafill ""
         bigmessage "One of these Records Might be for a separate 'Group' or company account. If so, please use the Procedure: PersonalAndBusinessRecords."
     endif
+    
+    select «Group» contains "No Group"
+        Formulafill ""
+    selectall
 
 CreateMergeRecord:
-     //__get lowest C#__//
+    //__get lowest C# and Code (first order) __//
     field «C#»
     minimum
     lowest_Cust_Num=«»
+
+    field Code
+    minimum
+
+
 
     //___flag as a merge record___//
     IsAMergeRecord="Yes"
@@ -443,8 +475,7 @@ CreateMergeRecord:
     right
     until info("fieldname")="Updated"
 
-    bigmessage "All Fields that were identical or empty have been added to a new merge Record. 
-        You may manually choose which parts to move or use CMD+2 to AutoMerge."
+    bigmessage "All Fields that were identical or empty have been added to a new merge Record."+¶+¶+"You may manually choose which parts to move or use CMD+2 to AutoMerge."
 
     
     debug
@@ -477,14 +508,14 @@ local Dictionary1, ProcedureList
 exportallprocedures "", Dictionary1
 clipboard()=Dictionary1
 
-message "Macros are saved to your clipboard!"
+message "Macros for "+info("databasename")+" are saved to your clipboard!"
 ___ ENDPROCEDURE ExportMacros __________________________________________________
 
 ___ PROCEDURE ImportMacros _____________________________________________________
 local Dictionary1,Dictionary2, ProcedureList
 Dictionary1=""
 Dictionary1=clipboard()
-yesno "Press yes to import all macros from clipboard"
+yesno "Press yes to import all macros from clipboard to: "+info("databasename")
 if clipboard()="No"
 stop
 endif
@@ -492,7 +523,7 @@ endif
 importdictprocedures Dictionary1, Dictionary2
 //changes the easy to read macros into a panorama readable file
 
- 
+
 //step 2
 //this lets you load your changes back in from an editor and put them in
 //copy your changed full procedure list back to your clipboard
@@ -503,3 +534,280 @@ loadallprocedures Dictionary2,ProcedureList
 message ProcedureList //messages which procedures got changed
 
 ___ ENDPROCEDURE ImportMacros __________________________________________________
+
+___ PROCEDURE AutoMerge/2 ______________________________________________________
+yesno "Automatically merge all selected records to the topmost (likely most recent) record? Oldest C#, and Code will be chosen. History will be merged."
+
+if clipboard()="Yes"
+    goto AutoMerge
+endif
+
+stop
+
+AutoMerge:
+lastrecord
+Field Con
+    loop
+        if «»=""
+            firstrecord
+            copy
+            lastrecord
+            paste
+        endif
+        right
+    until info("stopped") or info("fieldname")="Updated"
+debug
+call .LineItemMerge
+    
+___ ENDPROCEDURE AutoMerge/2 ___________________________________________________
+
+___ PROCEDURE .TestMath ________________________________________________________
+Global Return_To,
+    Seeds_Merged, Seeds_Rec1, Seeds_Rec2,
+    
+
+
+Return_To=0
+
+firstrecord
+
+LoadRecords:
+Seeds_Rec1=SeedsHistory
+downrecord
+//___end on summary record
+    if info("summary")>0 or info("stopped")
+        message "Got to summary, build a method for final merge?"
+    endif
+Seeds_Rec2=SeedsHistory
+
+Return_To=«C#»
+
+arrayfilter Seeds_Merged, Seeds_Merged, ",", val(array(Seeds_Rec1,seq(),","))+val(array(Seeds_Rec2, seq(), ","))
+displaydata Seeds_Merged
+lastrecord
+Field SeedsHistory
+«»=Seeds_Merged
+
+firstrecord
+
+find «C#»=Return_To
+
+
+___ ENDPROCEDURE .TestMath _____________________________________________________
+
+___ PROCEDURE .LineItemMerge ___________________________________________________
+Global Return_To, New_Master_Record,
+    Seeds_Merged, Seeds_Rec1, Seeds_Rec2
+
+New_Master_Record=0
+Return_To=0
+Seeds_Merged=0
+
+//__get MergeNumber for CustomerHistory
+lastrecord
+if info("summary")>0
+    New_Master_Record=«C#»
+endif
+
+
+
+firstrecord
+
+LoadRecords:
+Seeds_Rec1=SeedsHistory
+downrecord
+//___end on summary record
+    if info("summary")>0 or info("stopped")
+        message "Got to summary, build a method for final merge?"
+    endif
+Seeds_Rec2=SeedsHistory
+
+Return_To=«C#»
+
+;displaydata array(Seeds_Rec1, 1, ",")
+arrayfilter Seeds_Rec1, Seeds_Merged, ",", val(import())+val(array(Seeds_Rec2, seq(), ","))
+
+displaydata Seeds_Merged
+
+lastrecord
+
+SeedsHistory=Seeds_Merged
+
+firstrecord
+
+find «C#»=Return_To
+
+stop
+
+if info("windows") notcontains "customeractivity" and info("files") contains "customer_history"
+    openform "customeractivity"
+endif
+
+Window "customer_history:customeractivity"
+
+
+
+find «C#»=New_Master_Record
+
+if (not info("found"))
+    message "Procedure couldn't find C#: "+str(New_Master_Record)+". It will now stop. Notify Tech Team."
+endif
+
+///____Fill Sales History
+
+
+//____Seeds_____
+Global Seeds_Start, Seeds_Counter
+
+Seeds_Start=""
+
+arrayfilter dbinfo("fields", ""), Seeds_Fields, ¶, 
+    ?(import() match "S??" and val(import()[3,-1])>0,import(),"") //__Change Letter for others__//
+    arraystrip Seeds_Fields, ¶
+    
+    Seeds_Start=arrayfirst(Seeds_Fields,¶)
+    
+    gosheet
+    field (Seeds_Start)
+
+    if info("fieldname") contains Seeds_Start
+        goto FillSeeds
+    else
+        message "Did not find proper field, procedure stopped"
+    endif 
+
+    debug
+    FillSeeds:
+    Seeds_Counter=1
+    loop
+        «»=val(array(Seeds_Merged,Seeds_Counter, ","))
+        right
+        Seeds_Counter=Seeds_Counter+1
+    until info("fieldname") notmatch "S??"  //__Change Letter for others__//
+
+///_____Trees______
+Global Trees_Start, Trees_Counter
+
+Trees_Start=""
+
+arrayfilter dbinfo("fields", ""), Trees_Fields, ¶, 
+    ?(import() match "T??" and val(import()[3,-1])>0,import(),"") //__Change Letter for others__//
+    arraystrip Trees_Fields, ¶
+    
+    Trees_Start=arrayfirst(Trees_Fields,¶)
+    
+    gosheet
+    field (Trees_Start)
+
+    if info("fieldname") contains Trees_Start
+        goto FillTrees
+    else
+        message "Did not find proper field, procedure stopped"
+    endif 
+
+    debug
+    FillTrees:
+    Trees_Counter=1
+    loop
+        «»=val(array(Trees_Merged,Trees_Counter, ","))
+        right
+        Trees_Counter=Trees_Counter+1
+    until info("fieldname") notmatch "T??" //__Change Letter for others__//
+
+    ///_____Historical OGS______
+Global OGS_Start, OGS_Counter
+
+OGS_Start=""
+
+arrayfilter dbinfo("fields", ""), OGS_Fields, ¶, 
+    ?(import() match "OGS??" and val(import()[3,-1])>0,import(),"") //__Change Letter for others__//
+    arraystrip OGS_Fields, ¶
+    
+    OGS_Start=arrayfirst(OGS_Fields,¶)
+    
+    gosheet
+    field (OGS_Start)
+
+    if info("fieldname") contains OGS_Start
+        goto FillOGS
+    else
+        message "Did not find proper field, procedure stopped"
+    endif 
+
+    debug
+    FillOGS:
+    OGS_Counter=1
+    loop
+        «»=val(array(OGS_Merged,OGS_Counter, ","))
+        right
+        OGS_Counter=OGS_Counter+1
+    until info("fieldname") notmatch "OGS??" //__Change Letter for others__//
+
+        ///_____Current OGS i.e. Moose______
+Global Moose_Start, Moose_Counter
+
+Moose_Start=""
+
+arrayfilter dbinfo("fields", ""), Moose_Fields, ¶, 
+    ?(import() match "M??" and import() notcontains "MAd" and val(import()[3,-1])>0,import(),"") //__Change Letter for others__//
+    arraystrip Moose_Fields, ¶
+    
+    Moose_Start=arrayfirst(Moose_Fields,¶)
+    
+    gosheet
+    field (Moose_Start)
+
+    if info("fieldname") contains Moose_Start
+        goto FillMoose
+    else
+        message "Did not find proper field, procedure stopped"
+    endif 
+
+    debug
+    FillMoose:
+    Moose_Counter=1
+    loop
+        «»=val(array(Moose_Merged,Moose_Counter, ","))
+        right
+        Moose_Counter=Moose_Counter+1
+    until info("fieldname") notmatch "M??" and info("fieldname") notcontains "MAd" //__Change Letter for others__//
+
+            ///_____Current OGS i.e. Moose______
+Global Bulbs_Start, Bulbs_Counter
+
+Bulbs_Start=""
+
+arrayfilter dbinfo("fields", ""), Bulbs_Fields, ¶, 
+    ?(import() match "Bf??" and val(import()[3,-1])>0,import(),"") //__Change Letter for others__//
+    arraystrip Bulbs_Fields, ¶
+    
+    Bulbs_Start=arrayfirst(Bulbs_Fields,¶)
+    
+    gosheet
+    field (Bulbs_Start)
+
+    if info("fieldname") contains Bulbs_Start
+        goto FillBulbs
+    else
+        message "Did not find proper field, procedure stopped"
+    endif 
+
+    debug
+    FillBulbs:
+    Bulbs_Counter=1
+    loop
+        «»=val(array(Bulbs_Merged,Bulbs_Counter, ","))
+        right
+        Bulbs_Counter=Bulbs_Counter+1
+    until info("fieldname") notmatch "Bf??" //__Change Letter for others__//
+
+
+    ///___Update the screen___    
+        
+        Window "customer_history:customeractivity"
+    drawobjects
+___ ENDPROCEDURE .LineItemMerge ________________________________________________
+
+___ PROCEDURE .scrap ___________________________________________________________
+minimum
+___ ENDPROCEDURE .scrap ________________________________________________________

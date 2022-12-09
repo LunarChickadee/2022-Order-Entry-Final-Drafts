@@ -39,7 +39,7 @@ endcase
     Seeds_Num=""
 
     //__This just Fill the history on the Deduplicator
-    Seeds_Sales=lineitemarray(SΩ, ¶)
+    Seeds_Sales=lineitemarray(SΩ, ",")
     ///___Counts fields for the array, finds the non-zero ones, gives those counts and amounts
     arrayfilter lineitemarray(SΩ,¶), Seeds_History, ¶, str(Seq())+¬+import()
     arrayfilter Seeds_History,Recent_Seeds, ¶, ?(val(import()[¬,-1][2,-1])>0, import(),"")
@@ -414,10 +414,10 @@ Field «Group»
     arraybuild compare_records, ¶, "", «»
     arraydeduplicate compare_records, compare_records_again, ¶
     if arraycontains(compare_records,"No Group",¶)=-1 and linecount(compare_records_again)>1
-        select «Group» contains "No Group"
-        Formulafill ""
         bigmessage "One of these Records Might be for a separate 'Group' or company account. If so, please use the Procedure: PersonalAndBusinessRecords."
     endif
+    select «Group» contains "No Group"
+        Formulafill ""
 
 CreateMergeRecord:
      //__get lowest C#__//
@@ -503,3 +503,28 @@ loadallprocedures Dictionary2,ProcedureList
 message ProcedureList //messages which procedures got changed
 
 ___ ENDPROCEDURE ImportMacros __________________________________________________
+
+___ PROCEDURE AutoMerge/2 ______________________________________________________
+yesno "Automatically merge all selected records to the topmost (likely most recent) record?"
+
+if clipboard()="Yes"
+    goto AutoMerge
+endif
+
+stop
+
+AutoMerge:
+lastrecord
+Field Con
+    loop
+        if «»=""
+            firstrecord
+            copy
+            lastrecord
+            paste
+        endif
+        right
+    until info("stopped")
+
+    
+___ ENDPROCEDURE AutoMerge/2 ___________________________________________________
