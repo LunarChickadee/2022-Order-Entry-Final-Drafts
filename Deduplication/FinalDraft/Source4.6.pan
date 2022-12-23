@@ -1,5 +1,5 @@
 ___ PROCEDURE .Initialize ______________________________________________________
-global dedup_window, dedup_form_window, count_runs
+global dedup_window, dedup_form_window, count_runs, lowest_code
 
 count_runs=0
 
@@ -11,7 +11,10 @@ dedup_form_window=info("formname")
 
 call .BuildChoiceList
 
+if info("formname")≠""
 drawobjects
+endif
+
 showvariables list_of_records
 
 opensheet
@@ -28,6 +31,8 @@ Global Deduplicate_Selected_Array, Update_Weight, Last_Order_Weight, Was_Online,
     ///____Weights Variables_____
     highest_inq_code=0
     highest_year=0
+    ///____Weights Variables_____
+        //___These are from 1-5 and get multiplied later on. 5 being biggest influence, and 1 being smallest__//
     recent_inq=2
     has_redflag=""
     newest_inq=4
@@ -45,30 +50,16 @@ selectwithin striptoalpha(exportline())≠""
 removeunselected
 
 if count_runs<2
-bigmessage "This Procedure will put the record it guesses to have the most recent or correct information as the first record, then give you options for merging records. The summary (purple/blue shaded) record it creates is meant to be used as the new 'merged' record. This message will come up the first time you run this procedure in a day, and should disappear after."
+displaydata "This Procedure will put the record it guesses to have the most recent information as the first record, then gives you options for merging records. (Note: It may also put an older record higher if the customer has given a legal address for patronage dividends)
+
+The summary (purple/blue shaded) record it creates is meant to be used as the new 'merged' record. 
+
+You can do this entire process from the data sheet, but, there is also a form called 'ChooseDestination' that will make records easier to read and pick out key info from included most recent sales entered and from what branch. 
+
+All merged records that do not go back into the Mailing list or Customer history will go to a file called DedupArchive, which is a linked file
+
+This message will come up the first time you run this procedure after closing the file, but shouldn't come up after using CMD-1 during this session."
 endif 
-
-//these two let you make a specific array of what you've selected if you need to do more complex things
-        ;arrayselectedbuild Deduplicate_Selected_Array, ¶,"",exportline()
-            ;   select Deduplicate_Selected_Array contains exportline()
-
-////____Attempts to Weigh by criteria____
-/*
-1-5 Scale
-Has an inqcode in the last 5 years=3
-Has the most recent inqcode: 4
-Has a RedFlag: (notify user if this is the record chosen as most likely correct)
-Newest InqCode was from online: 5
-has newest inqcode: 4
-Has Sales attached to it: 3
-Has the most recent sales attached to it: 4
-Has been most recently updated in the ML: 3
-Has both TaxName and consent: 5
-Has TaxName: 4
-Hits multiple criteria: 5
-
-
-*/
 
 
 ///___was most recently updated
@@ -213,7 +204,7 @@ removeallsummaries
 
 selectwithin score_range contains str(HowLikelyWeight)
 if (not info("empty"))
-    message "User must audit because scores are too close."
+    bigmessage "Scores are really close on this one. Please merge by hand."
     goto CheckGroup
 endif
 
@@ -221,7 +212,7 @@ selectwithin str(HowLikelyWeight) contains str(max_score)
 
 if (not info("empty"))
     case info("selected")>1
-    message "User must audit because scores are too close"
+    message "Scores are really close on this one. Please merge by hand."
     endcase
 endif
 
@@ -248,15 +239,18 @@ CreateMergeRecord:
     minimum
     lowest_Cust_Num=«»
 
+
+lowest_code=""
     field Code
     minimum
+    lowest_code=«»
 
 
 
     //___flag as a merge record___//
     IsAMergeRecord="Yes"
 
-    //__Fill all info that's identical___//
+    //__Fill all info that's identical to the merge record___//
     
     field «Con»
     
@@ -271,7 +265,7 @@ CreateMergeRecord:
     right
     until info("fieldname")="Updated"
 
-    bigmessage "All Fields that were identical or empty have been added to a new merge Record."+¶+¶+"You may manually choose which parts to move and/or use:"+¶+¶+"CMD+2 to AutoMerge to the top record"+¶+¶+"CMD+3 or click a selection in the ChooseDesination Form to merge to selected record (Note: if you move things manually, you'll need to "
+    displaydata "All Fields that were identical or had holes in the data have been added to a new merge Record (summary record)."+¶+¶+"You may manually choose which parts to move and/or use:"+¶+¶+"CMD+2 to Choose the topmost record as the new 'master record' it will inherit the oldest C# and codes"+¶+"or"+¶+"us CMD+3 or click a selection in the ChooseDesination Form to merge to that selected record."
 
 call .BuildChoiceList   
 
@@ -294,19 +288,36 @@ ___ ENDPROCEDURE .Maximum ______________________________________________________
 
 ___ PROCEDURE .BuildChoiceList _________________________________________________
 
+//__differenciates between whether this was from a form press or from another call__//
+fileglobal refresh_pressed
 
+refresh_pressed=0
 
+if info("trigger") contains "Refresh"
+    refresh_pressed=-1
+endif
+
+//___if a form is currently the top window, open the datasheet, or bring it to the front___//
+
+if info("windowtype")=5
+    opensheet
+endif
+
+//__Get nonsummary records, and make them into a list__?/
 select info("summary")<1
 
 global list_of_records, record_count
 record_count=info("selected")
+//____Makes a readable, stackable display for the user on the ChooseDestination form_____//
 arrayselectedbuild list_of_records, ¶,"",arrayrange(exportline(),1, 7,¬)+¶+arrayrange(exportline(),15, 20,¬)+¶+
 "Last Entered Sale: Seeds:"+str(LastSeeds)+¬+" Trees:"+str(LastTrees)+" OGS:"+str(LastNewOGS)+" Bulbs:"+str(LastBulbs)+¶+
 "______________________________~"
 
 arrayfilter list_of_records, list_of_records, "~",
- ?(seq()=1,"Record "+str(seq())+":     "+¶+import(),
-            ?(seq()≤info("selected"),¶+"Record "+str(seq())+":     "+import(),""))
+?(seq()=1,"Record "+str(seq())+":     "+¶+import(),
+        ?(seq()≤info("selected"),¶+"Record "+str(seq())+":     "+import(),""))
+
+//________Makes everything update for the form______
             
 showvariables list_of_records, record_count
 
@@ -316,7 +327,13 @@ if info("formname")≠""
 drawobjects
 endif
 
+///___if this came from the from, go back there for ease of use by the user___//
+if refresh_pressed =-1
+nop
+else
+    //if you did't come from a form, go back to the data sheet
 window dedup_window
+endif
 
 ___ ENDPROCEDURE .BuildChoiceList ______________________________________________
 
@@ -327,13 +344,49 @@ if clipboard()="No"
     Stop
 endif
 
+firstrecord
+fileglobal auto_merge_record
+auto_merge_record=""
+
 field IsDestinationRecord
 formulafill ""
 
 IsDestinationRecord="Yes"
 
+auto_merge_record=exportline()
+lastrecord
+loop 
+
+
 call .LineItemMerge
     
+///___code should merge all the line item stuff, then make the top record be the new merge record with proper numbers
+
+field SeedsHistory
+
+loop
+move_history_up=«»
+firstrecord
+«»=move_history_up
+right
+lastrecord
+until info("fieldname") = "CountSequence"
+
+firstrecord 
+«Code»=lowest_code
+
+«OldCNums»=«C#»
+
+«C#»=lowest_Cust_Num
+
+lastrecord
+deleterecord
+firstrecord
+togglesummarylevel
+
+IsAMergeRecord="Yes"
+
+
 ___ ENDPROCEDURE AutoMerge/2 ___________________________________________________
 
 ___ PROCEDURE .LineItemMerge ___________________________________________________
@@ -512,12 +565,16 @@ endif
 
     MooseHistory=Moose_Merged
 
+/*
 yesno "stop?"
 if clipboard()="Yes"
 stop
 endif
+*/
 
-call .MergeToHistory
+
+//_____this shoudl be called only by the user I think___//
+;call .MergeToHistory
 ___ ENDPROCEDURE .LineItemMerge ________________________________________________
 
 ___ PROCEDURE ChooseMergeRecord/4 ______________________________________________
@@ -583,7 +640,13 @@ find «C#»=reference_num
         stop
     endif
 defaultcase
-    stop
+    window Dedup_form
+            LastBulbs=0
+            LastNewOGS=0
+            LastOldOGS=0
+            LastSeeds=0
+            LastTrees=0
+    rtn  //was stop
 endcase
 
 
@@ -833,21 +896,22 @@ message ProcedureList //messages which procedures got changed
 ___ ENDPROCEDURE ImportMacros __________________________________________________
 
 ___ PROCEDURE .TestMath ________________________________________________________
-lastrecord
-field «MostRecentEntered»
-maximum
-    case «»=0
-        nop
-    defaultcase
-        if val(«C#») < 1
-            openfile "Customer#"
-            call "newnumber"
-            window DedupWindow
-            field «C#»
+
+field IsDestinationRecord
+formulafill ""
+
+IsDestinationRecord="Yes"
+
+Field Con
+    loop
+        if «»=""
+            find IsDestinationRecord="Yes"
+            copy
+            lastrecord
             paste
-        endif 
-    endcase
-    
+        endif
+        right
+    until info("stopped") or info("fieldname")="Updated"
 ___ ENDPROCEDURE .TestMath _____________________________________________________
 
 ___ PROCEDURE .MergeToHistory __________________________________________________
@@ -1156,3 +1220,27 @@ ___ PROCEDURE .MergeHistory ____________________________________________________
 
     MooseHistory=Moose_Merged
 ___ ENDPROCEDURE .MergeHistory _________________________________________________
+
+___ PROCEDURE .CodeTest ________________________________________________________
+displaydata info("trigger")
+___ ENDPROCEDURE .CodeTest _____________________________________________________
+
+___ PROCEDURE .MergeSummaryTo __________________________________________________
+find IsAMergeRecord="Yes"
+if info("summary")<1
+    message "Error, this should only merge from a summary record, or a non-summary record says 'Yes' on field IsAMergeRecord"
+    stop
+endif
+
+global move_history_up
+
+field SeedsHistory
+
+loop
+move_history_up=«»
+firstrecord
+«»=move_history_up
+right
+lastrecord
+until info("fieldname") = "CountSequence"
+___ ENDPROCEDURE .MergeSummaryTo _______________________________________________
